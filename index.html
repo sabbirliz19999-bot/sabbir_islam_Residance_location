@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Location Map Portal</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+
+html,body{
+height:100%;
+margin:0;
+font-family:Arial,sans-serif;
+}
+
+#map{
+height:100%;
+width:100%;
+}
+
+.search-box{
+position:absolute;
+top:15px;
+left:50%;
+transform:translateX(-50%);
+z-index:1000;
+width:450px;
+max-width:95%;
+}
+
+#searchInput{
+width:100%;
+padding:12px 15px;
+font-size:16px;
+border:none;
+border-radius:10px;
+box-shadow:0 2px 10px rgba(0,0,0,.25);
+}
+
+#results{
+background:#fff;
+border-radius:10px;
+margin-top:5px;
+max-height:300px;
+overflow-y:auto;
+box-shadow:0 2px 10px rgba(0,0,0,.25);
+}
+
+.result-item{
+padding:12px;
+cursor:pointer;
+border-bottom:1px solid #eee;
+}
+
+.result-item:hover{
+background:#f5f5f5;
+}
+
+.popup-title{
+font-size:18px;
+font-weight:bold;
+margin-bottom:8px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="search-box">
+
+<input
+type="text"
+id="searchInput"
+placeholder="🔍 Search Location">
+
+<div id="results"></div>
+
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+
+const map = L.map('map').setView([23.8103,90.4125],7);
+
+L.tileLayer(
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+{
+attribution:'© OpenStreetMap'
+}
+).addTo(map);
+
+let locations=[];
+
+fetch('test_location.csv')
+.then(response => response.text())
+.then(data => {
+
+const rows = data.trim().split('\n');
+
+for(let i=1;i<rows.length;i++){
+
+const cols = rows[i].split(',');
+
+if(cols.length < 6) continue;
+
+const item = {
+
+name: cols[0],
+lat: parseFloat(cols[1]),
+lng: parseFloat(cols[2]),
+location: cols[3],
+manager: cols[4],
+number: cols[5]
+
+};
+
+item.marker = L.marker([item.lat,item.lng])
+.addTo(map)
+.bindPopup(`
+<div>
+<div class="popup-title">${item.name}</div>
+
+<b>Location:</b> ${item.location}<br>
+<b>Manager:</b> ${item.manager}<br>
+<b>Number:</b> ${item.number}
+</div>
+`);
+
+locations.push(item);
+
+}
+
+});
+
+const searchInput =
+document.getElementById('searchInput');
+
+const results =
+document.getElementById('results');
+
+searchInput.addEventListener('input',function(){
+
+const keyword =
+this.value.toLowerCase();
+
+results.innerHTML='';
+
+if(keyword==='') return;
+
+const filtered =
+locations.filter(item =>
+
+item.name.toLowerCase().includes(keyword)
+||
+item.location.toLowerCase().includes(keyword)
+||
+item.manager.toLowerCase().includes(keyword)
+
+);
+
+filtered.forEach(item => {
+
+const div =
+document.createElement('div');
+
+div.className='result-item';
+
+div.innerHTML=`
+<b>${item.name}</b><br>
+${item.location}
+`;
+
+div.onclick=()=>{
+
+map.setView(
+[item.lat,item.lng],
+15
+);
+
+item.marker.openPopup();
+
+results.innerHTML='';
+
+searchInput.value=item.name;
+
+};
+
+results.appendChild(div);
+
+});
+
+});
+
+</script>
+
+</body>
+</html>

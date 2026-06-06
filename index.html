@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>Location Portal</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+<style>
+
+html,body{
+height:100%;
+margin:0;
+}
+
+#map{
+height:100%;
+width:100%;
+}
+
+.search-container{
+position:absolute;
+top:15px;
+left:50%;
+transform:translateX(-50%);
+z-index:1000;
+width:400px;
+max-width:90%;
+}
+
+#searchBox{
+width:100%;
+padding:12px;
+font-size:16px;
+border:none;
+border-radius:10px;
+box-shadow:0 2px 10px rgba(0,0,0,.2);
+}
+
+#results{
+background:white;
+max-height:250px;
+overflow-y:auto;
+border-radius:10px;
+margin-top:5px;
+box-shadow:0 2px 10px rgba(0,0,0,.2);
+}
+
+.result-item{
+padding:10px;
+cursor:pointer;
+border-bottom:1px solid #eee;
+}
+
+.result-item:hover{
+background:#f5f5f5;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="search-container">
+
+<input
+type="text"
+id="searchBox"
+placeholder="Search location...">
+
+<div id="results"></div>
+
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+
+const map = L.map('map').setView([23.8103,90.4125],7);
+
+L.tileLayer(
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+{
+attribution:'© OpenStreetMap'
+}
+).addTo(map);
+
+let locations=[];
+
+fetch('test_location.csv')
+.then(res=>res.text())
+.then(data=>{
+
+const rows=data.trim().split('\n').slice(1);
+
+rows.forEach(row=>{
+
+const col=row.split(',');
+
+const item={
+
+name:col[0],
+lat:parseFloat(col[1]),
+lng:parseFloat(col[2]),
+location:col[3],
+department:col[4],
+manager:col[5]
+
+};
+
+item.marker=L.marker([item.lat,item.lng])
+.addTo(map)
+.bindPopup(
+
+`<b>${item.name}</b><br>
+Location: ${item.location}<br>
+Department: ${item.department}<br>
+Manager: ${item.manager}`
+
+);
+
+locations.push(item);
+
+});
+
+});
+
+const searchBox=document.getElementById("searchBox");
+const results=document.getElementById("results");
+
+searchBox.addEventListener("input",()=>{
+
+const keyword=searchBox.value.toLowerCase();
+
+results.innerHTML="";
+
+if(keyword==="") return;
+
+locations
+.filter(x=>
+
+x.name.toLowerCase().includes(keyword) ||
+x.location.toLowerCase().includes(keyword)
+
+)
+
+.forEach(item=>{
+
+const div=document.createElement("div");
+
+div.className="result-item";
+
+div.innerHTML=
+`<b>${item.name}</b><br>${item.location}`;
+
+div.onclick=()=>{
+
+map.setView(
+[item.lat,item.lng],
+15
+);
+
+item.marker.openPopup();
+
+results.innerHTML="";
+searchBox.value=item.name;
+
+};
+
+results.appendChild(div);
+
+});
+
+});
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Company Location Portal</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial,sans-serif;
+}
+
+body{
+display:flex;
+height:100vh;
+}
+
+.sidebar{
+width:320px;
+background:#0f172a;
+color:white;
+padding:20px;
+overflow-y:auto;
+}
+
+.sidebar h2{
+margin-bottom:15px;
+}
+
+#search{
+width:100%;
+padding:12px;
+border:none;
+border-radius:8px;
+margin-bottom:15px;
+}
+
+.location-item{
+background:#1e293b;
+padding:12px;
+margin-bottom:8px;
+border-radius:8px;
+cursor:pointer;
+}
+
+.location-item:hover{
+background:#334155;
+}
+
+#map{
+flex:1;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+
+<h2>📍 Company Locations</h2>
+
+<input
+type="text"
+id="search"
+placeholder="Search Location...">
+
+<div id="locationList"></div>
+
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+
+var map = L.map('map').setView([23.8103,90.4125],7);
+
+L.tileLayer(
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+{
+attribution:'© OpenStreetMap'
+}
+).addTo(map);
+
+let locations = [];
+
+fetch('test_location.csv')
+.then(response => response.text())
+.then(data => {
+
+const rows = data.trim().split('\n').slice(1);
+
+rows.forEach(row => {
+
+const cols = row.split(',');
+
+const name = cols[0];
+const lat = parseFloat(cols[1]);
+const lng = parseFloat(cols[2]);
+const location = cols[3];
+
+const marker = L.marker([lat,lng])
+.addTo(map)
+.bindPopup(`
+<b>${name}</b><br>
+Location: ${location}<br>
+Latitude: ${lat}<br>
+Longitude: ${lng}
+`);
+
+locations.push({
+name,
+lat,
+lng,
+location,
+marker
+});
+
+});
+
+renderList(locations);
+
+});
+
+function renderList(data){
+
+const list = document.getElementById("locationList");
+
+list.innerHTML = "";
+
+data.forEach(item => {
+
+const div = document.createElement("div");
+
+div.className = "location-item";
+
+div.innerHTML = `
+<b>${item.name}</b><br>
+${item.location}
+`;
+
+div.onclick = () => {
+
+map.setView(
+[item.lat,item.lng],
+14
+);
+
+item.marker.openPopup();
+
+};
+
+list.appendChild(div);
+
+});
+
+}
+
+document
+.getElementById("search")
+.addEventListener("keyup",function(){
+
+const keyword =
+this.value.toLowerCase();
+
+const filtered =
+locations.filter(item =>
+item.name.toLowerCase().includes(keyword)
+||
+item.location.toLowerCase().includes(keyword)
+);
+
+renderList(filtered);
+
+});
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Excel Map (Sheet Support)</title>
+
+  <meta charset="utf-8" />
+
+  <!-- Leaflet Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <!-- Excel Reader (SheetJS) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    #map { height: 100vh; }
+
+    #searchBox {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;
+      width: 300px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    #fileInput {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;
+      background: white;
+      padding: 5px;
+    }
+  </style>
+</head>
+
+<body>
+
+<input id="searchBox" placeholder="Search name / location / manager..." />
+<input type="file" id="fileInput" />
+
+<div id="map"></div>
+
+<script>
+var map = L.map('map').setView([23.8103, 90.4125], 7);
+
+// OpenStreetMap layer
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+
+let markers = [];
+
+// Clear markers
+function clearMarkers(){
+  markers.forEach(m => map.removeLayer(m.marker));
+  markers = [];
+}
+
+// Add marker
+function addMarker(row){
+  let marker = L.marker([row.latitude, row.longitude]).addTo(map);
+
+  marker.bindPopup(`
+    <b>${row.name}</b><br>
+    Location: ${row.location}<br>
+    Manager: ${row.manager}<br>
+    Phone: ${row.phone}
+  `);
+
+  markers.push({ marker, data: row });
+}
+
+// SEARCH BOX
+document.getElementById("searchBox").addEventListener("input", function(e){
+  let value = e.target.value.toLowerCase();
+
+  markers.forEach(item => {
+    let match =
+      (item.data.name || "").toLowerCase().includes(value) ||
+      (item.data.location || "").toLowerCase().includes(value) ||
+      (item.data.manager || "").toLowerCase().includes(value);
+
+    if(match){
+      item.marker.addTo(map);
+    } else {
+      map.removeLayer(item.marker);
+    }
+  });
+});
+
+// LOAD EXCEL FILE
+document.getElementById("fileInput").addEventListener("change", function(e){
+
+  let file = e.target.files[0];
+  let reader = new FileReader();
+
+  reader.onload = function(event){
+
+    let data = new Uint8Array(event.target.result);
+    let workbook = XLSX.read(data, { type: "array" });
+
+    // 👉 YOUR SHEET NAME
+    let sheetName = "test location";
+
+    let sheet = workbook.Sheets[sheetName];
+
+    if(!sheet){
+      alert("Sheet not found: " + sheetName);
+      return;
+    }
+
+    let jsonData = XLSX.utils.sheet_to_json(sheet);
+
+    clearMarkers();
+
+    jsonData.forEach(row => {
+      if(row.latitude && row.longitude){
+        addMarker(row);
+      }
+    });
+
+  };
+
+  reader.readAsArrayBuffer(file);
+});
+</script>
+
+</body>
+</html>
